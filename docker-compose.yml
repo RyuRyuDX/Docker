@@ -1,0 +1,54 @@
+version: "3"
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_volume:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    volumes:
+      - .:/heaven
+    ports:
+      - 3333:3000
+    stdin_open: true
+    tty: true
+    depends_on:
+      - db
+
+  esbuild:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: yarn esbuild --config=esbuild.config.js
+    environment:
+      - ESBUILD_WATCH=true
+    volumes:
+      - .:/heaven
+
+  tailwindcss:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bash -c "yarn tailwindcss -i ./app/assets/stylesheets/application.tailwind.css -o ./app/assets/builds/application.css --watch"
+    volumes:
+      - .:/heaven
+    stdin_open: true
+    tty: true
+
+  js:
+    build: .
+    command: yarn build --watch
+    volumes:
+      - .:/heaven
+
+volumes:
+  postgres_volume:
